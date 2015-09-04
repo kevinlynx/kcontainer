@@ -18,3 +18,25 @@ kcontainer is a lightweight container sample.
 |-- lib
 ```
 
+## Bundle Initializer sample
+
+```
+public class B implements IBundleInitializer {
+    static {
+        System.out.println("====B====");
+        Base b = new Base();
+        b.print();
+        System.out.println(B.class.getClassLoader());
+        System.out.println("====B====");
+    }
+
+    public void start(BundleContext context) {
+        System.out.println("B start: " + context.getName());
+        new A();
+    }
+
+    public void stop(BundleContext context) {
+        System.out.println("B stop: " + context.getName());
+    }
+}
+```
