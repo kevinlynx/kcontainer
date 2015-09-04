@@ -7,10 +7,12 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.Collection;
+import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.codemacro.container.util.UnzipJar;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
@@ -18,8 +20,10 @@ import com.google.common.collect.Lists;
 
 // bundle-name/classes
 // bundle-name/lib/*.jar
+// bundle-name/lib/*.jar (with inner jars)
 public class BundleClassLoader extends URLClassLoader {
   private static Logger logger = LoggerFactory.getLogger(BundleClassLoader.class);
+  private static final String TMP_PATH = new File("./tmp").getAbsolutePath();
   private SharedClassList sharedClasses;
   
   public BundleClassLoader(File home, SharedClassList sharedClasses) {
@@ -36,8 +40,10 @@ public class BundleClassLoader extends URLClassLoader {
     } catch (ClassNotFoundException e) {
       claz = null;
     }
-    if (claz != null)
+    if (claz != null) {
+      logger.debug("load from class path for {}", name);
       return claz;
+    }
     claz = sharedClasses.get(name);
     if (claz != null) {
       logger.debug("load from shared class for {}", name);
@@ -69,6 +75,14 @@ public class BundleClassLoader extends URLClassLoader {
     Collection<URL> col_urls = Lists.newArrayList();
     if (jars != null) {
       col_urls.addAll(Lists.transform(Lists.newArrayList(jars), tran_fn));
+      for (File jar: jars) { // add inner jar to class path
+        if (UnzipJar.hasEntry(jar.getAbsolutePath(), ".jar")) {
+          List<File> inner_jars = extractInnerJars(home.getName(), jar.getAbsolutePath());
+          if (inner_jars != null) {
+            col_urls.addAll(Lists.transform(inner_jars, tran_fn));
+          }
+        }
+      }
     }
     String classes_path = home.getAbsolutePath() + "/classes/";
     File classes = new File(classes_path);
@@ -82,6 +96,17 @@ public class BundleClassLoader extends URLClassLoader {
         return url != null;
       }
     })).toArray(urls);
+  }
+  
+  private static List<File> extractInnerJars(String name, String jarFile) {
+    logger.debug("extract inner jars {}", jarFile);
+    String dst = TMP_PATH + File.separator + name;
+    try {
+      return UnzipJar.unzipJar(dst, jarFile, ".jar");
+    } catch (IOException e) {
+      logger.warn("extract jar file {} failed", jarFile);
+    }
+    return null;
   }
   
   public static void main(String[] args) throws ClassNotFoundException, IOException, InterruptedException {
