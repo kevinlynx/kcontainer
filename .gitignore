@@ -1,0 +1,7 @@
+*.swp
+*.class
+*target*
+.classpath
+.project
+.settings
+bundle

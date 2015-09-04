@@ -1,0 +1,2 @@
+init=com.codemacro.test.B
+export-class=com.codemacro.test.Export
